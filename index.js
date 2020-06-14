@@ -6,6 +6,7 @@ const linkCheck = require('link-check');
 const LinkCheckResult = require('link-check').LinkCheckResult;
 const markdownLinkExtractor = require('markdown-link-extractor');
 const ProgressBar = require('progress');
+const url = require('url');
 
 module.exports = function markdownLinkCheck(markdown, opts, callback) {
     if (arguments.length === 2 && typeof opts === 'function') {
@@ -81,7 +82,29 @@ module.exports = function markdownLinkCheck(markdown, opts, callback) {
                 result.status = 'error'; // custom status for errored links
             }
 
-            callback(null, result);
+            if (result.stream) {
+                const chunks = [];
+                let anchor = url.parse(link, false, true).hash;
+                result.stream.on('data', opts.checkAnchors && anchor ? c => chunks.push(c) : () => {});
+                result.stream.on('error', (err) => {
+                    result = new LinkCheckResult(opts, link, 500, err);
+                    result.status = 'error';
+                    callback(null, result);
+                });
+                result.stream.on('end', () => {
+                    if (opts.checkAnchors && anchor) {
+                        let content = Buffer.concat(chunks).toString();
+                        let allAnchors = markdownLinkExtractor.extractAnchors(content);
+                        if (!allAnchors.includes(anchor)) {
+                            result = new LinkCheckResult(opts, link, 404, err);
+                        }
+                    }
+
+                    callback(null, result);
+                });
+            } else {
+                callback(null, result);
+            }
         });
     }, callback);
 };

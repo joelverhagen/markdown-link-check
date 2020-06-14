@@ -26,6 +26,7 @@ program
     .option('-c, --config [config]', 'apply a config file (JSON), holding e.g. url specific header configuration')
     .option('-q, --quiet', 'displays errors only')
     .option('-v, --verbose', 'displays detailed error information')
+    .option('-a, --anchors', 'check anchors in addition to following urls (slower)')
     .arguments('[filenameOrUrl]')
     .action(function (filenameOrUrl) {
     filenameForOutput = filenameOrUrl;
@@ -43,6 +44,7 @@ program
             }
 
         });
+        opts.url = filenameOrUrl;
         try { // extract baseUrl from supplied URL
             const parsed = url.parse(filenameOrUrl);
             delete parsed.search;
@@ -60,6 +62,7 @@ program
                 process.exit(1);
             }
         });
+        opts.url = 'file://' + path.resolve(filenameOrUrl);
         opts.baseUrl = 'file://' + path.dirname(path.resolve(filenameOrUrl));
         stream = fs.createReadStream(filenameOrUrl);
     }
@@ -69,6 +72,7 @@ program
 opts.showProgressBar = (program.progress === true); // force true or undefined to be true or false.
 opts.quiet = (program.quiet === true);
 opts.verbose = (program.verbose === true);
+opts.checkAnchors = (program.anchors === true);
 
 let markdown = ''; // collect the markdown data, then process it
 
